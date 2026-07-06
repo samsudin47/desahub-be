@@ -1,0 +1,16 @@
+<?php
+
+namespace Shared\Constants;
+
+class AvailableServiceFeatureConstantsHelper
+{
+    const IAM_USER_MANAGEMENT = 'IAM_USER_MANAGEMENT';
+
+    const IAM_RBAC_ROLE = 'IAM_RBAC_ROLE';
+
+    const IAM_RBAC_SERVICE_FEATURE = 'IAM_RBAC_SERVICE_FEATURE';
+
+    const IAM_RBAC_PERMISSION = 'IAM_RBAC_PERMISSION';
+
+    const IAM_RBAC_ACCESS_CONTROL = 'IAM_RBAC_ACCESS_CONTROL';
+}

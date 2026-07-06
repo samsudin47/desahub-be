@@ -1,0 +1,11 @@
+{
+    "name": "BeritaDesa",
+    "alias": "beritadesa",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\BeritaDesa\\Providers\\BeritaDesaServiceProvider"
+    ],
+    "files": []
+}

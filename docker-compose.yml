@@ -1,0 +1,58 @@
+version: "3.8"
+
+name: desahub
+
+services:
+    app:
+        container_name: desahub-app
+        build:
+            context: .
+            dockerfile: deploy/Dockerfile
+        volumes:
+            - .:/var/www
+        environment:
+            APP_NAME: DesaHub
+            DB_CONNECTION: pgsql
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_DATABASE: desahubdb2026
+            DB_USERNAME: desahub
+            DB_PASSWORD: "desahub@2026!"
+        depends_on:
+            - db
+        networks:
+            - desahub
+
+    nginx:
+        container_name: desahub-nginx
+        image: nginx:alpine
+        ports:
+            - "8000:80"
+        volumes:
+            - .:/var/www
+            - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf
+        depends_on:
+            - app
+        networks:
+            - desahub
+
+    db:
+        container_name: desahub-db
+        image: postgres:16-alpine
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_DB: desahubdb2026
+            POSTGRES_USER: desahub
+            POSTGRES_PASSWORD: "desahub@2026!"
+        volumes:
+            - desahub_pgdata:/var/lib/postgresql/data
+        networks:
+            - desahub
+
+volumes:
+    desahub_pgdata:
+
+networks:
+    desahub:
+        name: desahub-network
