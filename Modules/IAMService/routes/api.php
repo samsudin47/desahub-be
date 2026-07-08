@@ -29,6 +29,7 @@ $registerAuthenticationRoutes = function (string $namePrefix): void {
 
 Route::prefix('v1/iam-services')->group(function () use ($registerAuthenticationRoutes) {
     Route::get('health', [HealthCheckController::class, 'index'])->name('iam-services.health');
+    Route::get('roles', [UserController::class, 'getRoles'])->name('iam-services.roles');
 
     $registerAuthenticationRoutes('iam-services');
 

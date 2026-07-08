@@ -3,7 +3,7 @@
 namespace Modules\IAMService\Http\Requests;
 
 use Illuminate\Validation\Rule;
-use Shared\Constants\AvailableRoleConstantsHelper;
+use Modules\IAMService\Models\Role;
 
 class RegisterRequest extends ApiFormRequest
 {
@@ -21,20 +21,7 @@ class RegisterRequest extends ApiFormRequest
             'username' => ['required', 'string', 'max:50', Rule::unique('user', 'username')],
             'email' => ['required', 'string', 'email', 'max:100', Rule::unique('user', 'email')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => ['nullable', 'string', Rule::in($this->availableRoles())],
-        ];
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function availableRoles(): array
-    {
-        return [
-            AvailableRoleConstantsHelper::SUPERADMIN,
-            AvailableRoleConstantsHelper::ADMIN,
-            AvailableRoleConstantsHelper::WARGA,
-            AvailableRoleConstantsHelper::USER,
+            'role' => ['nullable', 'string', Rule::exists('role', 'role')->where(fn ($query) => $query->where('is_active', true)->where('is_deleted', false))],
         ];
     }
 
@@ -44,7 +31,20 @@ class RegisterRequest extends ApiFormRequest
     public function messages(): array
     {
         return [
-            'role.in' => 'Role must be one of: '.implode(', ', $this->availableRoles()).'.',
+            'role.exists' => 'Role must be one of: '.implode(', ', $this->availableRoles()).'.',
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function availableRoles(): array
+    {
+        return Role::query()
+            ->active()
+            ->notDeleted()
+            ->orderBy('role')
+            ->pluck('role')
+            ->all();
     }
 }

@@ -1,5 +1,7 @@
 {
     "IAMService": true,
     "ProfileService": true,
-    "BeritaDesa": true
+    "BeritaDesa": true,
+    "DataManagement": true,
+    "MarketplaceService": true
 }

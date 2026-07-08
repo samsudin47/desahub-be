@@ -14,10 +14,16 @@ class RoleCheckMiddleware
     /**
      * @param  Closure(Request): Response  $next
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (isHasRoleSuperadmin() || getUserRoles($role)) {
+        if (isHasRoleSuperadmin()) {
             return $next($request);
+        }
+
+        foreach ($roles as $role) {
+            if (getUserRoles($role)) {
+                return $next($request);
+            }
         }
 
         return $this->forbidden(

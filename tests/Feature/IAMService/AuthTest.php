@@ -1,13 +1,17 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\IAMService\Database\Seeders\RoleSeeder;
+use Modules\IAMService\Models\Role;
 use Modules\IAMService\Models\User;
+use Modules\IAMService\Services\UserRoleService;
 use Shared\Constants\AvailableRoleConstantsHelper;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->artisan('migrate', ['--path' => 'Modules/IAMService/database/migrations', '--realpath' => true]);
+    $this->seed(RoleSeeder::class);
 });
 
 it('registers a new user', function () {
@@ -22,12 +26,23 @@ it('registers a new user', function () {
         ->assertJsonPath('result', 'success')
         ->assertJsonPath('datas.user.username', 'johndoe')
         ->assertJsonPath('datas.user.role', AvailableRoleConstantsHelper::USER)
-        ->assertJsonStructure(['datas' => ['token', 'user' => ['uuid', 'username', 'email']]]);
+        ->assertJsonPath('datas.user.roles', [AvailableRoleConstantsHelper::USER])
+        ->assertJsonStructure(['datas' => ['token', 'user' => ['uuid', 'username', 'email', 'roles']]]);
 
     $this->assertDatabaseHas('user', [
         'username' => 'johndoe',
         'email' => 'john@example.com',
         'role' => AvailableRoleConstantsHelper::USER,
+        'is_active' => true,
+        'is_deleted' => false,
+    ]);
+
+    $user = User::query()->where('username', 'johndoe')->first();
+    $role = Role::query()->where('role', AvailableRoleConstantsHelper::USER)->first();
+
+    $this->assertDatabaseHas('user_role', [
+        'uuid_user' => $user->uuid,
+        'uuid_role' => $role->uuid,
         'is_active' => true,
         'is_deleted' => false,
     ]);
@@ -43,11 +58,15 @@ it('registers a new user with custom role', function () {
     ]);
 
     $response->assertOk()
-        ->assertJsonPath('datas.user.role', AvailableRoleConstantsHelper::WARGA);
+        ->assertJsonPath('datas.user.role', AvailableRoleConstantsHelper::WARGA)
+        ->assertJsonPath('datas.user.roles', [AvailableRoleConstantsHelper::WARGA]);
 
-    $this->assertDatabaseHas('user', [
-        'username' => 'wargauser',
-        'role' => AvailableRoleConstantsHelper::WARGA,
+    $user = User::query()->where('username', 'wargauser')->first();
+    $role = Role::query()->where('role', AvailableRoleConstantsHelper::WARGA)->first();
+
+    $this->assertDatabaseHas('user_role', [
+        'uuid_user' => $user->uuid,
+        'uuid_role' => $role->uuid,
     ]);
 });
 
@@ -72,7 +91,7 @@ it('validates register payload', function () {
 });
 
 it('logs in with valid credentials', function () {
-    User::create([
+    $user = User::create([
         'uuid' => generateUuid(),
         'username' => 'janedoe',
         'email' => 'jane@example.com',
@@ -84,6 +103,8 @@ it('logs in with valid credentials', function () {
         'updated_by' => 'test',
     ]);
 
+    app(UserRoleService::class)->assignRoleToUser($user, AvailableRoleConstantsHelper::USER, 'test');
+
     $response = $this->postJson('/api/v1/iam-services/auth/login', [
         'username' => 'janedoe',
         'password' => 'password123',
@@ -92,6 +113,7 @@ it('logs in with valid credentials', function () {
     $response->assertOk()
         ->assertJsonPath('result', 'success')
         ->assertJsonPath('datas.user.username', 'janedoe')
+        ->assertJsonPath('datas.user.roles', [AvailableRoleConstantsHelper::USER])
         ->assertJsonStructure(['datas' => ['token']]);
 });
 
@@ -118,6 +140,8 @@ it('logs out authenticated user', function () {
         'updated_by' => 'test',
     ]);
 
+    app(UserRoleService::class)->assignRoleToUser($user, AvailableRoleConstantsHelper::USER, 'test');
+
     $token = auth('api')->login($user);
 
     $response = $this->postJson('/api/v1/iam-services/auth/logout', [], [
@@ -126,4 +150,27 @@ it('logs out authenticated user', function () {
 
     $response->assertOk()
         ->assertJsonPath('result', 'success');
+});
+
+it('backfills user role from legacy role column', function () {
+    $user = User::create([
+        'uuid' => generateUuid(),
+        'username' => 'legacyuser',
+        'email' => 'legacy@example.com',
+        'password' => 'password123',
+        'role' => AvailableRoleConstantsHelper::ADMIN,
+        'is_active' => true,
+        'is_deleted' => false,
+        'created_by' => 'test',
+        'updated_by' => 'test',
+    ]);
+
+    app(UserRoleService::class)->syncUserRoleFromLegacyColumn($user, 'test');
+
+    $role = Role::query()->where('role', AvailableRoleConstantsHelper::ADMIN)->first();
+
+    $this->assertDatabaseHas('user_role', [
+        'uuid_user' => $user->uuid,
+        'uuid_role' => $role->uuid,
+    ]);
 });

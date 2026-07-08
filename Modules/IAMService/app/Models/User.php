@@ -3,6 +3,7 @@
 namespace Modules\IAMService\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
@@ -62,5 +63,13 @@ class User extends Authenticatable implements JWTSubject
     public function scopeNotDeleted(Builder $query): Builder
     {
         return $query->where('is_deleted', false);
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'user_role', 'uuid_user', 'uuid_role', 'uuid', 'uuid')
+            ->withPivot(['uuid', 'is_active', 'is_deleted', 'created_by', 'updated_by', 'deleted_by'])
+            ->wherePivot('is_active', true)
+            ->wherePivot('is_deleted', false);
     }
 }

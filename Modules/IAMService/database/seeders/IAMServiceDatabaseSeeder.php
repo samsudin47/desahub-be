@@ -6,11 +6,16 @@ use Illuminate\Database\Seeder;
 
 class IAMServiceDatabaseSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            ServiceModuleSeeder::class,
+            RoleSeeder::class,
+            PermissionSeeder::class,
+            ServiceFeatureSeeder::class,
+            RolePermissionServiceFeatureSeeder::class,
+            SuperadminSeeder::class,
+            SyncUserRoleSeeder::class,
+        ]);
     }
 }

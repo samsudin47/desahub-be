@@ -1,0 +1,11 @@
+{
+    "name": "DataManagement",
+    "alias": "datamanagement",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\DataManagement\\Providers\\DataManagementServiceProvider"
+    ],
+    "files": []
+}

@@ -16,9 +16,9 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthenticationMiddleware
 {
-  /**
-   * @param  Closure(Request): Response  $next
-   */
+    /**
+     * @param  Closure(Request): Response  $next
+     */
     public function handle(Request $request, Closure $next, string ...$guards): Response
     {
         if ($this->shouldPassThrough($request)) {
@@ -95,6 +95,7 @@ class AuthenticationMiddleware
     {
         return config('iamservice.auth.public_routes', [
             'api/v1/iam-services/health',
+            'api/v1/iam-services/roles',
             'api/v1/iam-services/auth/login',
             'api/v1/iam-services/auth/register',
             'api/v1/iam-services/auth/reset-password',
