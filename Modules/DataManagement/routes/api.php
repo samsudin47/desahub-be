@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\DataManagement\Http\Controllers\MasterKategoriController;
+use Modules\DataManagement\Http\Controllers\MasterPenjualController;
 use Shared\Constants\AvailablePermissionConstantsHelper;
 use Shared\Constants\AvailableRoleConstantsHelper;
 use Shared\Constants\AvailableServiceFeatureConstantsHelper;
@@ -35,5 +36,29 @@ Route::prefix('v1/data-management')->middleware([
         Route::middleware([
             sprintf('%s:%s,%s', MiddlewareConstantsHelper::DESAHUB_ACCESS_PERMISSION, AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_KATEGORI, AvailablePermissionConstantsHelper::DELETE),
         ])->delete('{uuid}', [MasterKategoriController::class, 'destroy'])->name('data-management.master-kategori.destroy');
+    });
+
+    Route::prefix('master-penjual')->middleware([
+        sprintf('%s:%s', MiddlewareConstantsHelper::DESAHUB_FEATURE_PERMISSION, AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL),
+    ])->group(function () {
+        Route::middleware([
+            sprintf('%s:%s,%s', MiddlewareConstantsHelper::DESAHUB_ACCESS_PERMISSION, AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL, AvailablePermissionConstantsHelper::READ_LIST),
+        ])->get('', [MasterPenjualController::class, 'index'])->name('data-management.master-penjual.index');
+
+        Route::middleware([
+            sprintf('%s:%s,%s', MiddlewareConstantsHelper::DESAHUB_ACCESS_PERMISSION, AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL, AvailablePermissionConstantsHelper::CREATE),
+        ])->post('', [MasterPenjualController::class, 'store'])->name('data-management.master-penjual.store');
+
+        Route::middleware([
+            sprintf('%s:%s,%s', MiddlewareConstantsHelper::DESAHUB_ACCESS_PERMISSION, AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL, AvailablePermissionConstantsHelper::READ_DETAIL),
+        ])->get('{uuid}', [MasterPenjualController::class, 'show'])->name('data-management.master-penjual.show');
+
+        Route::middleware([
+            sprintf('%s:%s,%s', MiddlewareConstantsHelper::DESAHUB_ACCESS_PERMISSION, AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL, AvailablePermissionConstantsHelper::UPDATE),
+        ])->put('{uuid}', [MasterPenjualController::class, 'update'])->name('data-management.master-penjual.update');
+
+        Route::middleware([
+            sprintf('%s:%s,%s', MiddlewareConstantsHelper::DESAHUB_ACCESS_PERMISSION, AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL, AvailablePermissionConstantsHelper::DELETE),
+        ])->delete('{uuid}', [MasterPenjualController::class, 'destroy'])->name('data-management.master-penjual.destroy');
     });
 });

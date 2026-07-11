@@ -43,6 +43,7 @@ class RolePermissionServiceFeatureSeeder extends Seeder
             AvailableServiceFeatureConstantsHelper::IAM_RBAC_PERMISSION,
             AvailableServiceFeatureConstantsHelper::IAM_RBAC_ACCESS_CONTROL,
             AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_KATEGORI,
+            AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL,
         ];
 
         $adminPermissions = [

@@ -44,6 +44,11 @@ class ServiceFeatureSeeder extends Seeder
             'name' => 'Master Kategori',
             'description' => 'Manage master kategori data',
         ],
+        AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL => [
+            'module' => AvailableServiceModuleConstantsHelper::SERVICE_DATA_MANAGEMENT,
+            'name' => 'Master Penjual',
+            'description' => 'Manage master penjual data',
+        ],
     ];
 
     public function run(): void
