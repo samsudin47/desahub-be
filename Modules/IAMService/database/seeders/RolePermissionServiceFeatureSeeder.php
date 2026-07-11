@@ -42,6 +42,7 @@ class RolePermissionServiceFeatureSeeder extends Seeder
             AvailableServiceFeatureConstantsHelper::IAM_RBAC_SERVICE_FEATURE,
             AvailableServiceFeatureConstantsHelper::IAM_RBAC_PERMISSION,
             AvailableServiceFeatureConstantsHelper::IAM_RBAC_ACCESS_CONTROL,
+            AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_KATEGORI,
         ];
 
         $adminPermissions = [
@@ -49,6 +50,7 @@ class RolePermissionServiceFeatureSeeder extends Seeder
             AvailablePermissionConstantsHelper::READ_DETAIL,
             AvailablePermissionConstantsHelper::CREATE,
             AvailablePermissionConstantsHelper::UPDATE,
+            AvailablePermissionConstantsHelper::DELETE,
         ];
 
         $serviceFeatures = ServiceFeature::query()

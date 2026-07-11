@@ -39,6 +39,11 @@ class ServiceFeatureSeeder extends Seeder
             'name' => 'RBAC Access Control',
             'description' => 'Manage RBAC access control mappings',
         ],
+        AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_KATEGORI => [
+            'module' => AvailableServiceModuleConstantsHelper::SERVICE_DATA_MANAGEMENT,
+            'name' => 'Master Kategori',
+            'description' => 'Manage master kategori data',
+        ],
     ];
 
     public function run(): void

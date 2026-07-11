@@ -20,6 +20,10 @@ class ServiceModuleSeeder extends Seeder
             'name' => 'IAM RBAC',
             'description' => 'Role-based access control management module',
         ],
+        AvailableServiceModuleConstantsHelper::SERVICE_DATA_MANAGEMENT => [
+            'name' => 'Data Management Service',
+            'description' => 'Data management service module',
+        ],
     ];
 
     public function run(): void
