@@ -1,0 +1,11 @@
+{
+    "name": "DropdownService",
+    "alias": "dropdownservice",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\DropdownService\\Providers\\DropdownServiceServiceProvider"
+    ],
+    "files": []
+}

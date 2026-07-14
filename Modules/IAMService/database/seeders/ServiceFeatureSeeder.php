@@ -49,6 +49,11 @@ class ServiceFeatureSeeder extends Seeder
             'name' => 'Master Penjual',
             'description' => 'Manage master penjual data',
         ],
+        AvailableServiceFeatureConstantsHelper::MARKETPLACE_PRODUCT => [
+            'module' => AvailableServiceModuleConstantsHelper::SERVICE_MARKETPLACE,
+            'name' => 'Product',
+            'description' => 'Manage marketplace product data',
+        ],
     ];
 
     public function run(): void

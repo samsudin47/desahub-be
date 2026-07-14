@@ -3,5 +3,6 @@
     "ProfileService": true,
     "BeritaDesa": true,
     "DataManagement": true,
-    "MarketplaceService": true
+    "MarketplaceService": true,
+    "DropdownService": true
 }

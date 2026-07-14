@@ -1,21 +1,21 @@
 <?php
 
-namespace Modules\MarketplaceService\Providers;
+namespace Modules\DropdownService\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
-class MarketplaceServiceServiceProvider extends ModuleServiceProvider
+class DropdownServiceServiceProvider extends ModuleServiceProvider
 {
     /**
      * The name of the module.
      */
-    protected string $name = 'MarketplaceService';
+    protected string $name = 'DropdownService';
 
     /**
      * The lowercase version of the module name.
      */
-    protected string $nameLower = 'marketplaceservice';
+    protected string $nameLower = 'dropdownservice';
 
     /**
      * Command classes to register.

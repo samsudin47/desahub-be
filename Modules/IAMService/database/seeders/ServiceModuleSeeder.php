@@ -24,6 +24,10 @@ class ServiceModuleSeeder extends Seeder
             'name' => 'Data Management Service',
             'description' => 'Data management service module',
         ],
+        AvailableServiceModuleConstantsHelper::SERVICE_MARKETPLACE => [
+            'name' => 'Marketplace Service',
+            'description' => 'Marketplace product management service module',
+        ],
     ];
 
     public function run(): void
