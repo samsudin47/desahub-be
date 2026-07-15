@@ -28,6 +28,10 @@ class ServiceModuleSeeder extends Seeder
             'name' => 'Marketplace Service',
             'description' => 'Marketplace product management service module',
         ],
+        AvailableServiceModuleConstantsHelper::SERVICE_DROPDOWN => [
+            'name' => 'Dropdown Service',
+            'description' => 'Dropdown data service module',
+        ],
     ];
 
     public function run(): void

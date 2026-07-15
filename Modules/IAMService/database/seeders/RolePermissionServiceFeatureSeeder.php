@@ -17,6 +17,7 @@ class RolePermissionServiceFeatureSeeder extends Seeder
     {
         $this->seedSuperadminFullAccess();
         $this->seedAdminAccess();
+        $this->seedUserAndWargaDropdownAccess();
     }
 
     private function seedSuperadminFullAccess(): void
@@ -45,6 +46,7 @@ class RolePermissionServiceFeatureSeeder extends Seeder
             AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_KATEGORI,
             AvailableServiceFeatureConstantsHelper::DATA_MANAGEMENT_MASTER_PENJUAL,
             AvailableServiceFeatureConstantsHelper::MARKETPLACE_PRODUCT,
+            AvailableServiceFeatureConstantsHelper::DROPDOWN_CATEGORIES,
         ];
 
         $adminPermissions = [
@@ -71,6 +73,32 @@ class RolePermissionServiceFeatureSeeder extends Seeder
             foreach ($permissions as $permission) {
                 $this->upsertAccessControl($role->uuid, $serviceFeature->uuid, $permission->uuid);
             }
+        }
+    }
+
+    private function seedUserAndWargaDropdownAccess(): void
+    {
+        $roles = Role::query()
+            ->whereIn('role', [
+                AvailableRoleConstantsHelper::USER,
+                AvailableRoleConstantsHelper::WARGA,
+            ])
+            ->get();
+
+        $serviceFeature = ServiceFeature::query()
+            ->active()
+            ->notDeleted()
+            ->where('service_feature_name', AvailableServiceFeatureConstantsHelper::DROPDOWN_CATEGORIES)
+            ->firstOrFail();
+
+        $permission = Permission::query()
+            ->active()
+            ->notDeleted()
+            ->where('name', AvailablePermissionConstantsHelper::READ_LIST)
+            ->firstOrFail();
+
+        foreach ($roles as $role) {
+            $this->upsertAccessControl($role->uuid, $serviceFeature->uuid, $permission->uuid);
         }
     }
 

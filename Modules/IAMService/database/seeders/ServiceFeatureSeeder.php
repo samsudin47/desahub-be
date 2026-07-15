@@ -54,6 +54,11 @@ class ServiceFeatureSeeder extends Seeder
             'name' => 'Product',
             'description' => 'Manage marketplace product data',
         ],
+        AvailableServiceFeatureConstantsHelper::DROPDOWN_CATEGORIES => [
+            'module' => AvailableServiceModuleConstantsHelper::SERVICE_DROPDOWN,
+            'name' => 'Categories',
+            'description' => 'Manage dropdown categories data',
+        ],
     ];
 
     public function run(): void
