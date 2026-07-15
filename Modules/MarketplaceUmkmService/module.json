@@ -1,0 +1,11 @@
+{
+    "name": "MarketplaceUmkmService",
+    "alias": "marketplaceumkmservice",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\MarketplaceUmkmService\\Providers\\MarketplaceUmkmServiceServiceProvider"
+    ],
+    "files": []
+}

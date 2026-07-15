@@ -4,5 +4,6 @@
     "BeritaDesa": true,
     "DataManagement": true,
     "MarketplaceService": true,
-    "DropdownService": true
+    "DropdownService": true,
+    "MarketplaceUmkmService": true
 }
