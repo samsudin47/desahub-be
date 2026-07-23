@@ -70,4 +70,14 @@ class Checkout extends Model
     {
         return $this->hasOne(CheckoutShipping::class, 'uuid_checkout', 'uuid');
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(CheckoutPayment::class, 'uuid_checkout', 'uuid');
+    }
+
+    public function latestPayment(): HasOne
+    {
+        return $this->hasOne(CheckoutPayment::class, 'uuid_checkout', 'uuid')->latestOfMany('created_at');
+    }
 }

@@ -94,6 +94,8 @@ it('adds product to cart when clicking tambah', function () {
         ->assertJsonPath('datas.total_item', 1)
         ->assertJsonPath('datas.total_harga', 80000)
         ->assertJsonPath('datas.items.0.produk.nama_produk', 'Baju Pria')
+        ->assertJsonPath('datas.items.0.produk.stock', 10)
+        ->assertJsonPath('datas.items.0.produk.sisa_stock', 9)
         ->assertJsonPath('datas.items.0.produk.penjual.nama', 'Hangga Hendrawan');
 
     $this->assertDatabaseHas('cart', [
@@ -123,7 +125,8 @@ it('increments quantity when same product is added again', function () {
 
     $response->assertOk()
         ->assertJsonPath('datas.total_item', 3)
-        ->assertJsonPath('datas.items.0.quantity', 3);
+        ->assertJsonPath('datas.items.0.quantity', 3)
+        ->assertJsonPath('datas.items.0.produk.sisa_stock', 7);
 
     expect(CartItem::query()->notDeleted()->count())->toBe(1);
 });
@@ -170,7 +173,8 @@ it('updates cart item quantity', function () {
 
     $response->assertOk()
         ->assertJsonPath('datas.total_item', 4)
-        ->assertJsonPath('datas.total_harga', 320000);
+        ->assertJsonPath('datas.total_harga', 320000)
+        ->assertJsonPath('datas.items.0.produk.sisa_stock', 6);
 });
 
 it('increments cart item quantity via plus endpoint', function () {
@@ -188,7 +192,8 @@ it('increments cart item quantity via plus endpoint', function () {
     $response->assertOk()
         ->assertJsonPath('datas.items.0.quantity', 2)
         ->assertJsonPath('datas.total_item', 2)
-        ->assertJsonPath('datas.total_harga', 160000);
+        ->assertJsonPath('datas.total_harga', 160000)
+        ->assertJsonPath('datas.items.0.produk.sisa_stock', 8);
 });
 
 it('decrements cart item quantity via minus endpoint', function () {
@@ -206,7 +211,8 @@ it('decrements cart item quantity via minus endpoint', function () {
     $response->assertOk()
         ->assertJsonPath('datas.items.0.quantity', 2)
         ->assertJsonPath('datas.total_item', 2)
-        ->assertJsonPath('datas.total_harga', 160000);
+        ->assertJsonPath('datas.total_harga', 160000)
+        ->assertJsonPath('datas.items.0.produk.sisa_stock', 8);
 });
 
 it('removes cart item when minus reaches one', function () {

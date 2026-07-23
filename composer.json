@@ -12,6 +12,7 @@
         "php": "^8.3",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
+        "midtrans/midtrans-php": "^2.6",
         "nwidart/laravel-modules": "^13.0",
         "ramsey/uuid": "^4.9",
         "tymon/jwt-auth": "^2.3"

@@ -27,6 +27,7 @@ class CartService
      *             nama_produk: string,
      *             harga: int,
      *             stock: int,
+     *             sisa_stock: int,
      *             gambar: string|null,
      *             penjual: array{uuid: string, nama: string|null}
      *         }
@@ -59,6 +60,7 @@ class CartService
      *             nama_produk: string,
      *             harga: int,
      *             stock: int,
+     *             sisa_stock: int,
      *             gambar: string|null,
      *             penjual: array{uuid: string, nama: string|null}
      *         }
@@ -120,6 +122,7 @@ class CartService
      *             nama_produk: string,
      *             harga: int,
      *             stock: int,
+     *             sisa_stock: int,
      *             gambar: string|null,
      *             penjual: array{uuid: string, nama: string|null}
      *         }
@@ -156,6 +159,7 @@ class CartService
      *             nama_produk: string,
      *             harga: int,
      *             stock: int,
+     *             sisa_stock: int,
      *             gambar: string|null,
      *             penjual: array{uuid: string, nama: string|null}
      *         }
@@ -192,6 +196,7 @@ class CartService
      *             nama_produk: string,
      *             harga: int,
      *             stock: int,
+     *             sisa_stock: int,
      *             gambar: string|null,
      *             penjual: array{uuid: string, nama: string|null}
      *         }
@@ -228,6 +233,7 @@ class CartService
      *             nama_produk: string,
      *             harga: int,
      *             stock: int,
+     *             sisa_stock: int,
      *             gambar: string|null,
      *             penjual: array{uuid: string, nama: string|null}
      *         }
@@ -392,6 +398,7 @@ class CartService
      *             nama_produk: string,
      *             harga: int,
      *             stock: int,
+     *             sisa_stock: int,
      *             gambar: string|null,
      *             penjual: array{uuid: string, nama: string|null}
      *         }
@@ -431,6 +438,7 @@ class CartService
      *         nama_produk: string,
      *         harga: int,
      *         stock: int,
+     *         sisa_stock: int,
      *         gambar: string|null,
      *         penjual: array{uuid: string, nama: string|null}
      *     }
@@ -441,6 +449,7 @@ class CartService
         $product = $cartItem->product;
         $harga = (int) $product->harga;
         $quantity = (int) $cartItem->quantity;
+        $stock = (int) $product->stock;
 
         return [
             'uuid' => $cartItem->uuid,
@@ -450,7 +459,8 @@ class CartService
                 'uuid' => $product->uuid,
                 'nama_produk' => $product->nama_product,
                 'harga' => $harga,
-                'stock' => (int) $product->stock,
+                'stock' => $stock,
+                'sisa_stock' => max(0, $stock - $quantity),
                 'gambar' => $product->gambar !== null
                     ? Storage::disk('public')->url($product->gambar)
                     : null,
