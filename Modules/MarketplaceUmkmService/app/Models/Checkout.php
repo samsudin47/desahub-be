@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Modules\IAMService\Models\User;
 
 class Checkout extends Model
@@ -63,5 +64,10 @@ class Checkout extends Model
     public function checkoutItems(): HasMany
     {
         return $this->hasMany(CheckoutItem::class, 'uuid_checkout', 'uuid');
+    }
+
+    public function shipping(): HasOne
+    {
+        return $this->hasOne(CheckoutShipping::class, 'uuid_checkout', 'uuid');
     }
 }

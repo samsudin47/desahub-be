@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\MarketplaceUmkmService\Http\Controllers\CartController;
 use Modules\MarketplaceUmkmService\Http\Controllers\CheckoutController;
+use Modules\MarketplaceUmkmService\Http\Controllers\CheckoutShippingController;
 use Modules\MarketplaceUmkmService\Http\Controllers\ProductCategoriesController;
 use Shared\Constants\AvailableRoleConstantsHelper;
 use Shared\Constants\MiddlewareConstantsHelper;
@@ -48,4 +49,10 @@ Route::prefix('v1/marketplace-umkm-service')->middleware([
 
     Route::post('checkout/{uuid}/cancel', [CheckoutController::class, 'cancel'])
         ->name('marketplace-umkm-service.checkout.cancel');
+
+    Route::put('checkout/{uuid}/shipping', [CheckoutShippingController::class, 'upsert'])
+        ->name('marketplace-umkm-service.checkout.shipping.upsert');
+
+    Route::get('checkout/{uuid}/shipping', [CheckoutShippingController::class, 'show'])
+        ->name('marketplace-umkm-service.checkout.shipping.show');
 });

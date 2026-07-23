@@ -30,4 +30,18 @@ trait ValidatesCheckout
             ],
         ];
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function updateCheckoutShippingRules(): array
+    {
+        return [
+            'nama_penerima' => ['required', 'string', 'max:100'],
+            'no_hp_penerima' => ['required', 'string', 'max:20'],
+            'alamat_penerima' => ['required', 'string'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ];
+    }
 }
