@@ -210,7 +210,8 @@ it('handles midtrans settlement notification and deducts stock', function () {
         ],
     ];
 
-    $this->postJson('/api/v1/marketplace-umkm-service/midtrans/notification', $payload)
+    $this->withoutToken()
+        ->postJson('/api/v1/marketplace-umkm-service/midtrans/notification', $payload)
         ->assertOk();
 
     expect(Checkout::query()->where('uuid', $checkoutUuid)->value('status'))->toBe('paid');
@@ -233,11 +234,12 @@ it('rejects invalid midtrans signature', function () {
         ->postJson('/api/v1/marketplace-umkm-service/checkout/'.$checkoutUuid.'/pay')
         ->assertOk();
 
-    $this->postJson('/api/v1/marketplace-umkm-service/midtrans/notification', [
-        'order_id' => $pay->json('datas.order_id'),
-        'status_code' => '200',
-        'gross_amount' => '80000.00',
-        'signature_key' => 'invalid',
-        'transaction_status' => 'settlement',
-    ])->assertStatus(400);
+    $this->withoutToken()
+        ->postJson('/api/v1/marketplace-umkm-service/midtrans/notification', [
+            'order_id' => $pay->json('datas.order_id'),
+            'status_code' => '200',
+            'gross_amount' => '80000.00',
+            'signature_key' => 'invalid',
+            'transaction_status' => 'settlement',
+        ])->assertStatus(400);
 });

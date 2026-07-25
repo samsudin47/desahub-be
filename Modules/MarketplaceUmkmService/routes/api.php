@@ -6,6 +6,7 @@ use Modules\MarketplaceUmkmService\Http\Controllers\CheckoutController;
 use Modules\MarketplaceUmkmService\Http\Controllers\CheckoutPaymentController;
 use Modules\MarketplaceUmkmService\Http\Controllers\CheckoutShippingController;
 use Modules\MarketplaceUmkmService\Http\Controllers\MidtransNotificationController;
+use Modules\MarketplaceUmkmService\Http\Controllers\OrderController;
 use Modules\MarketplaceUmkmService\Http\Controllers\ProductCategoriesController;
 use Shared\Constants\AvailableRoleConstantsHelper;
 use Shared\Constants\MiddlewareConstantsHelper;
@@ -67,5 +68,8 @@ Route::prefix('v1/marketplace-umkm-service')->group(function () {
 
         Route::get('checkout/{uuid}/payment', [CheckoutPaymentController::class, 'show'])
             ->name('marketplace-umkm-service.checkout.payment.show');
+
+        Route::get('orders', [OrderController::class, 'index'])
+            ->name('marketplace-umkm-service.orders.index');
     });
 });

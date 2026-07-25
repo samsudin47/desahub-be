@@ -19,6 +19,7 @@ return [
             'api/v1/iam/auth/login',
             'api/v1/iam/auth/register',
             'api/v1/iam/auth/reset-password',
+            'api/v1/marketplace-umkm-service/midtrans/notification',
         ],
         'inactivity_warning_minutes' => 10,
         'inactivity_expiry_minutes' => 30,
