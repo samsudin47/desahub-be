@@ -5,7 +5,7 @@ namespace Modules\MarketplaceUmkmService\Http\Requests;
 use Illuminate\Validation\Rule;
 use Shared\Constants\CheckoutStatusConstantsHelper;
 
-class ListOrdersRequest extends ApiFormRequest
+class ListAdminOrdersRequest extends ApiFormRequest
 {
     public function authorize(): bool
     {

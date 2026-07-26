@@ -5,6 +5,7 @@ namespace Modules\MarketplaceUmkmService\Services;
 use Illuminate\Support\Facades\Storage;
 use Modules\MarketplaceUmkmService\Models\Checkout;
 use Modules\MarketplaceUmkmService\Models\CheckoutItem;
+use Shared\Constants\CheckoutStatusConstantsHelper;
 
 class OrderService
 {
@@ -36,7 +37,7 @@ class OrderService
         $query = Checkout::query()
             ->notDeleted()
             ->where('uuid_user', getUserId())
-            ->whereNotIn('status', ['draft'])
+            ->whereNotIn('status', [CheckoutStatusConstantsHelper::DRAFT])
             ->with([
                 'checkoutItems' => fn ($q) => $q->notDeleted(),
                 'checkoutItems.product:uuid,nama_product,harga,gambar',
@@ -134,13 +135,6 @@ class OrderService
 
     private function statusLabel(string $status): string
     {
-        return match ($status) {
-            'pending' => 'Menunggu Pembayaran',
-            'paid' => 'Diproses',
-            'cancelled' => 'Dibatalkan',
-            'failed' => 'Gagal',
-            'expired' => 'Kedaluwarsa',
-            default => ucfirst($status),
-        };
+        return CheckoutStatusConstantsHelper::label($status);
     }
 }

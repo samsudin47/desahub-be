@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\MarketplaceUmkmService\Http\Controllers\AdminOrderController;
 use Modules\MarketplaceUmkmService\Http\Controllers\CartController;
 use Modules\MarketplaceUmkmService\Http\Controllers\CheckoutController;
 use Modules\MarketplaceUmkmService\Http\Controllers\CheckoutPaymentController;
@@ -71,5 +72,33 @@ Route::prefix('v1/marketplace-umkm-service')->group(function () {
 
         Route::get('orders', [OrderController::class, 'index'])
             ->name('marketplace-umkm-service.orders.index');
+    });
+
+    Route::middleware([
+        MiddlewareConstantsHelper::DESAHUB_AUTH_API,
+        sprintf(
+            '%s:%s,%s',
+            MiddlewareConstantsHelper::DESAHUB_USER_ROLE,
+            AvailableRoleConstantsHelper::ADMIN,
+            AvailableRoleConstantsHelper::SUPERADMIN,
+        ),
+    ])->prefix('admin')->group(function () {
+        Route::get('orders', [AdminOrderController::class, 'index'])
+            ->name('marketplace-umkm-service.admin.orders.index');
+
+        Route::get('orders/{uuid}', [AdminOrderController::class, 'show'])
+            ->name('marketplace-umkm-service.admin.orders.show');
+
+        Route::post('orders/{uuid}/process', [AdminOrderController::class, 'process'])
+            ->name('marketplace-umkm-service.admin.orders.process');
+
+        Route::post('orders/{uuid}/ship', [AdminOrderController::class, 'ship'])
+            ->name('marketplace-umkm-service.admin.orders.ship');
+
+        Route::post('orders/{uuid}/complete', [AdminOrderController::class, 'complete'])
+            ->name('marketplace-umkm-service.admin.orders.complete');
+
+        Route::post('orders/{uuid}/cancel', [AdminOrderController::class, 'cancel'])
+            ->name('marketplace-umkm-service.admin.orders.cancel');
     });
 });
