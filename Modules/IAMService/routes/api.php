@@ -18,6 +18,7 @@ $registerAuthenticationRoutes = function (string $namePrefix): void {
     Route::prefix('auth')->group(function () use ($namePrefix) {
         Route::post('register', [AuthenticationController::class, 'register'])->name("{$namePrefix}.register");
         Route::post('login', [AuthenticationController::class, 'login'])->name("{$namePrefix}.login");
+        Route::post('forgot-password', [AuthenticationController::class, 'forgotPassword'])->name("{$namePrefix}.forgot-password");
         Route::post('reset-password', [AuthenticationController::class, 'resetPassword'])->name("{$namePrefix}.reset-password");
 
         Route::middleware(MiddlewareConstantsHelper::DESAHUB_AUTH_API)->group(function () use ($namePrefix) {

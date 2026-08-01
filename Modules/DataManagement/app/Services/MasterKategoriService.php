@@ -2,10 +2,48 @@
 
 namespace Modules\DataManagement\Services;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Modules\DataManagement\Models\MasterKategori;
+use Shared\Utilities\PaginationHelper;
 
 class MasterKategoriService
 {
+    /**
+     * @return array{
+     *     items: list<array{uuid: string, nama_kategori: string, deskripsi: string|null}>,
+     *     pagination: LengthAwarePaginator
+     * }
+     */
+    public function getPaginated(?int $perPage = null, ?string $search = null): array
+    {
+        $paginator = MasterKategori::query()
+            ->notDeleted()
+            ->when($search !== null, function ($query) use ($search): void {
+                $term = '%'.$search.'%';
+
+                $query->where(function ($query) use ($term): void {
+                    $query->where('nama_kategori', 'like', $term)
+                        ->orWhere('deskripsi', 'like', $term);
+                });
+            })
+            ->orderBy('nama_kategori')
+            ->paginate(
+                PaginationHelper::resolvePerPage($perPage),
+                ['uuid', 'nama_kategori', 'deskripsi']
+            );
+
+        $paginator->setCollection(
+            $paginator->getCollection()
+                ->map(fn (MasterKategori $masterKategori) => $this->format($masterKategori))
+                ->values()
+        );
+
+        return [
+            'items' => $paginator->items(),
+            'pagination' => $paginator,
+        ];
+    }
+
     /**
      * @return list<array{uuid: string, nama_kategori: string, deskripsi: string|null}>
      */

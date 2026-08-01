@@ -2,8 +2,10 @@
 
 namespace Modules\IAMService\Services;
 
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
 use Modules\IAMService\Models\User;
 use Shared\Constants\AvailableRoleConstantsHelper;
 
@@ -77,6 +79,61 @@ class AuthService
     public function logout(): void
     {
         Auth::guard('api')->logout();
+    }
+
+    /**
+     * Always succeeds from the caller's perspective to avoid email enumeration.
+     */
+    public function forgotPassword(string $email): void
+    {
+        $user = User::query()
+            ->where('email', $email)
+            ->active()
+            ->notDeleted()
+            ->first();
+
+        if ($user === null) {
+            return;
+        }
+
+        Password::broker()->sendResetLink([
+            'email' => $email,
+        ]);
+    }
+
+    /**
+     * @param  array{email: string, token: string, password: string}  $payload
+     */
+    public function resetPassword(array $payload): bool
+    {
+        $user = User::query()
+            ->where('email', $payload['email'])
+            ->active()
+            ->notDeleted()
+            ->first();
+
+        if ($user === null) {
+            return false;
+        }
+
+        $status = Password::broker()->reset(
+            [
+                'email' => $payload['email'],
+                'password' => $payload['password'],
+                'password_confirmation' => $payload['password'],
+                'token' => $payload['token'],
+            ],
+            function (User $user, string $password): void {
+                $user->forceFill([
+                    'password' => $password,
+                    'updated_by' => 'reset-password',
+                ])->save();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        return $status === Password::PASSWORD_RESET;
     }
 
     /**

@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Modules\IAMService\Http\Middleware\AuthenticationMiddleware;
+use Modules\MarketplaceUmkmService\Http\Middleware\ProtectMidtransNotificationMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'midtrans.protect' => ProtectMidtransNotificationMiddleware::class,
+        ]);
         $middleware->group('api', [
             SubstituteBindings::class,
             AuthenticationMiddleware::class,

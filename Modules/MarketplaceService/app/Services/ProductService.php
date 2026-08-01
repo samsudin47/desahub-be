@@ -2,12 +2,68 @@
 
 namespace Modules\MarketplaceService\Services;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Modules\MarketplaceService\Models\Product;
+use Shared\Utilities\PaginationHelper;
 
 class ProductService
 {
+    /**
+     * @return array{
+     *     items: list<array{
+     *         uuid: string,
+     *         nama_product: string,
+     *         deskripsi: string,
+     *         harga: int,
+     *         stock: int,
+     *         gambar: string|null,
+     *         uuid_kategori: string,
+     *         nama_kategori: string|null,
+     *         uuid_penjual: string,
+     *         nama_penjual: string|null
+     *     }>,
+     *     pagination: LengthAwarePaginator
+     * }
+     */
+    public function getPaginated(?int $perPage = null, ?string $search = null): array
+    {
+        $paginator = Product::query()
+            ->notDeleted()
+            ->with([
+                'kategori:uuid,nama_kategori',
+                'penjual:uuid,nama_penjual',
+            ])
+            ->when($search !== null, function ($query) use ($search): void {
+                $term = '%'.$search.'%';
+
+                $query->where(function ($query) use ($term): void {
+                    $query->where('nama_product', 'like', $term)
+                        ->orWhere('deskripsi', 'like', $term)
+                        ->orWhereHas('kategori', function ($query) use ($term): void {
+                            $query->where('nama_kategori', 'like', $term);
+                        })
+                        ->orWhereHas('penjual', function ($query) use ($term): void {
+                            $query->where('nama_penjual', 'like', $term);
+                        });
+                });
+            })
+            ->orderByDesc('created_at')
+            ->paginate(PaginationHelper::resolvePerPage($perPage));
+
+        $paginator->setCollection(
+            $paginator->getCollection()
+                ->map(fn (Product $product) => $this->format($product))
+                ->values()
+        );
+
+        return [
+            'items' => $paginator->items(),
+            'pagination' => $paginator,
+        ];
+    }
+
     /**
      * @return list<array{
      *     uuid: string,

@@ -50,6 +50,14 @@ services:
         networks:
             - desahub
 
+    redis:
+        container_name: desahub-redis
+        image: redis:alpine
+        ports:
+            - "6379:6379"
+        networks:
+            - desahub
+
 volumes:
     desahub_pgdata:
 

@@ -4,6 +4,7 @@ namespace Modules\MarketplaceUmkmService\Services;
 
 use App\Facades\ResponseStandardAPI;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Modules\IAMService\Models\User;
 use Modules\MarketplaceService\Models\Product;
@@ -73,10 +74,12 @@ class CheckoutPaymentService
             try {
                 $snapToken = $this->midtransSnapClient->createSnapToken($params);
             } catch (Throwable $exception) {
+                report($exception);
+
                 throw new HttpResponseException(
                     ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_ERROR)
                         ->info('Gagal membuat pembayaran Midtrans')
-                        ->detail($exception->getMessage())
+                        ->detail('Gagal membuat pembayaran Midtrans')
                         ->response()
                 );
             }
@@ -140,44 +143,86 @@ class CheckoutPaymentService
         return $this->formatPayment($payment);
     }
 
+    public function cancelPendingPaymentsForCheckout(string $checkoutUuid, string $reason = 'checkout_cancelled'): void
+    {
+        $payments = CheckoutPayment::query()
+            ->notDeleted()
+            ->pending()
+            ->where('uuid_checkout', $checkoutUuid)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($payments as $payment) {
+            if ($payment->order_id) {
+                $this->midtransSnapClient->cancelTransaction($payment->order_id);
+            }
+
+            $payment->update([
+                'status' => 'cancelled',
+                'transaction_status' => 'cancel',
+                'cancelled_at' => now(),
+                'cancel_reason' => $reason,
+                'snap_token' => null,
+                'updated_by' => getUserId() ?? 'system',
+            ]);
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array{message: string}
      */
-    public function handleNotification(array $payload): array
+    public function handleNotification(array $payload, ?string $ipAddress = null): array
     {
         $orderId = (string) ($payload['order_id'] ?? '');
         $statusCode = (string) ($payload['status_code'] ?? '');
         $grossAmount = (string) ($payload['gross_amount'] ?? '');
         $signatureKey = (string) ($payload['signature_key'] ?? '');
         $transactionStatus = (string) ($payload['transaction_status'] ?? '');
+        $payloadHash = hash('sha256', $orderId.'|'.$statusCode.'|'.$grossAmount.'|'.$transactionStatus.'|'.$signatureKey);
 
-        $signatureValid = $orderId !== ''
-            && $statusCode !== ''
-            && $grossAmount !== ''
-            && $signatureKey !== ''
-            && $this->midtransSnapClient->isValidSignature($orderId, $statusCode, $grossAmount, $signatureKey);
+        // Anti-replay/spam: dedupe notifikasi identik dalam 2 menit
+        $dedupeKey = 'midtrans:dedupe:'.$payloadHash;
+        if (! Cache::add($dedupeKey, true, 120)) {
+            return ['message' => 'Notifikasi duplikat diabaikan'];
+        }
 
-        $notification = CheckoutPaymentNotification::query()->create([
-            'uuid' => generateUuid(),
-            'uuid_checkout_payment' => null,
-            'order_id' => $orderId !== '' ? $orderId : null,
-            'transaction_status' => $transactionStatus !== '' ? $transactionStatus : null,
-            'payload' => $payload,
-            'signature_valid' => $signatureValid,
-            'processed_at' => null,
-        ]);
+        $signatureValid = $this->midtransSnapClient->isValidSignature(
+            $orderId,
+            $statusCode,
+            $grossAmount,
+            $signatureKey
+        );
 
         if (! $signatureValid) {
+            $this->markIpInvalid($ipAddress);
+            $this->storeRejectedNotification(
+                payload: ['order_id' => $orderId, 'transaction_status' => $transactionStatus], // jangan simpan full payload palsu
+                orderId: $orderId,
+                transactionStatus: $transactionStatus,
+                signatureValid: false,
+                rejectReason: 'invalid_signature',
+                ipAddress: $ipAddress,
+                payloadHash: $payloadHash,
+                httpStatus: 400,
+            );
+
             throw new HttpResponseException(
                 ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_ERROR)
                     ->info('Signature Midtrans tidak valid')
                     ->detail('Signature Midtrans tidak valid')
-                    ->response()
+                    ->response(400)
             );
         }
 
-        return DB::transaction(function () use ($payload, $orderId, $notification) {
+        return DB::transaction(function () use (
+            $payload,
+            $orderId,
+            $grossAmount,
+            $transactionStatus,
+            $payloadHash,
+            $ipAddress
+        ) {
             $payment = CheckoutPayment::query()
                 ->notDeleted()
                 ->where('order_id', $orderId)
@@ -185,38 +230,202 @@ class CheckoutPaymentService
                 ->first();
 
             if ($payment === null) {
-                $notification->update([
-                    'processed_at' => now(),
-                ]);
+                $this->storeRejectedNotification(
+                    payload: $payload,
+                    orderId: $orderId,
+                    transactionStatus: $transactionStatus,
+                    signatureValid: true,
+                    rejectReason: 'payment_not_found',
+                    ipAddress: $ipAddress,
+                    payloadHash: $payloadHash,
+                    httpStatus: 400,
+                );
 
                 throw new HttpResponseException(
                     ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_ERROR)
                         ->info('Data pembayaran tidak ditemukan')
                         ->detail('Data pembayaran tidak ditemukan')
-                        ->response()
+                        ->response(400)
                 );
             }
 
-            $notification->update([
+            if ($this->normalizeAmount($grossAmount) !== (int) $payment->gross_amount) {
+                $this->storeRejectedNotification(
+                    payload: $payload,
+                    orderId: $orderId,
+                    transactionStatus: $transactionStatus,
+                    signatureValid: true,
+                    rejectReason: 'amount_mismatch',
+                    ipAddress: $ipAddress,
+                    payloadHash: $payloadHash,
+                    httpStatus: 400,
+                    paymentUuid: $payment->uuid,
+                );
+
+                throw new HttpResponseException(
+                    ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_ERROR)
+                        ->info('Nominal pembayaran tidak sesuai')
+                        ->detail('Nominal pembayaran tidak sesuai')
+                        ->response(400)
+                );
+            }
+
+            try {
+                $statusFromApi = $this->midtransSnapClient->getTransactionStatus($orderId);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                $this->storeRejectedNotification(
+                    payload: $payload,
+                    orderId: $orderId,
+                    transactionStatus: $transactionStatus,
+                    signatureValid: true,
+                    rejectReason: 'status_api_failed',
+                    ipAddress: $ipAddress,
+                    payloadHash: $payloadHash,
+                    httpStatus: 502,
+                    paymentUuid: $payment->uuid,
+                );
+
+                throw new HttpResponseException(
+                    ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_ERROR)
+                        ->info('Gagal verifikasi status Midtrans')
+                        ->detail('Gagal verifikasi status Midtrans')
+                        ->response(502)
+                );
+            }
+
+            $apiOrderId = (string) ($statusFromApi['order_id'] ?? '');
+            $apiStatus = (string) ($statusFromApi['transaction_status'] ?? '');
+            $apiGross = (string) ($statusFromApi['gross_amount'] ?? '');
+            $apiFraud = isset($statusFromApi['fraud_status']) ? (string) $statusFromApi['fraud_status'] : null;
+
+            if (
+                $apiOrderId !== $orderId
+                || $this->normalizeAmount($apiGross) !== (int) $payment->gross_amount
+            ) {
+                $this->storeRejectedNotification(
+                    payload: $payload,
+                    orderId: $orderId,
+                    transactionStatus: $transactionStatus,
+                    signatureValid: true,
+                    rejectReason: 'status_api_mismatch',
+                    ipAddress: $ipAddress,
+                    payloadHash: $payloadHash,
+                    httpStatus: 400,
+                    paymentUuid: $payment->uuid,
+                    verifiedViaApi: true,
+                );
+
+                throw new HttpResponseException(
+                    ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_ERROR)
+                        ->info('Status Midtrans tidak sesuai')
+                        ->detail('Status Midtrans tidak sesuai')
+                        ->response(400)
+                );
+            }
+
+            $notification = CheckoutPaymentNotification::query()->create([
+                'uuid' => generateUuid(),
                 'uuid_checkout_payment' => $payment->uuid,
+                'order_id' => $orderId,
+                'transaction_status' => $apiStatus,
+                'payload' => $payload,
+                'signature_valid' => true,
+                'reject_reason' => null,
+                'verified_via_api' => true,
+                'ip_address' => $ipAddress,
+                'payload_hash' => $payloadHash,
+                'http_status' => 200,
+                'processed_at' => null,
+            ]);
+
+            $payment->fill([
+                'last_status_payload' => $statusFromApi,
+                'verified_at' => now(),
+                'verification_source' => 'status_api',
+                'updated_by' => 'midtrans',
             ]);
 
             if ($payment->status === 'paid') {
-                $notification->update([
-                    'processed_at' => now(),
-                ]);
+                $notification->update(['processed_at' => now()]);
+                $payment->save();
 
                 return ['message' => 'Pembayaran sudah diproses'];
             }
 
-            $this->applyNotificationToPayment($payment, $payload);
+            // Gunakan status dari API, bukan body mentah
+            $this->applyNotificationToPayment($payment, array_merge($payload, [
+                'transaction_status' => $apiStatus,
+                'fraud_status' => $apiFraud,
+                'payment_type' => $statusFromApi['payment_type'] ?? ($payload['payment_type'] ?? null),
+                'transaction_id' => $statusFromApi['transaction_id'] ?? ($payload['transaction_id'] ?? null),
+            ]));
 
-            $notification->update([
-                'processed_at' => now(),
-            ]);
+            $notification->update(['processed_at' => now()]);
 
             return ['message' => 'Notifikasi berhasil diproses'];
         });
+    }
+
+    private function normalizeAmount(string $amount): int
+    {
+        return (int) round((float) $amount);
+    }
+
+    private function markIpInvalid(?string $ipAddress): void
+    {
+        if ($ipAddress === null || $ipAddress === '') {
+            return;
+        }
+
+        $counterKey = 'midtrans:invalid:'.$ipAddress;
+        $count = (int) Cache::increment($counterKey);
+
+        if ($count === 1) {
+            Cache::put($counterKey, 1, 300);
+        }
+
+        if ($count >= 20) {
+            Cache::put('midtrans:block:'.$ipAddress, true, 900);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function storeRejectedNotification(
+        array $payload,
+        string $orderId,
+        string $transactionStatus,
+        bool $signatureValid,
+        string $rejectReason,
+        ?string $ipAddress,
+        string $payloadHash,
+        int $httpStatus,
+        ?string $paymentUuid = null,
+        bool $verifiedViaApi = false,
+    ): void {
+        // Batasi tulis DB saat flood: max 1 row / hash / 5 menit
+        $writeKey = 'midtrans:reject-write:'.$payloadHash;
+        if (! Cache::add($writeKey, true, 300)) {
+            return;
+        }
+
+        CheckoutPaymentNotification::query()->create([
+            'uuid' => generateUuid(),
+            'uuid_checkout_payment' => $paymentUuid,
+            'order_id' => $orderId !== '' ? $orderId : null,
+            'transaction_status' => $transactionStatus !== '' ? $transactionStatus : null,
+            'payload' => $payload,
+            'signature_valid' => $signatureValid,
+            'reject_reason' => $rejectReason,
+            'verified_via_api' => $verifiedViaApi,
+            'ip_address' => $ipAddress,
+            'payload_hash' => $payloadHash,
+            'http_status' => $httpStatus,
+            'processed_at' => now(),
+        ]);
     }
 
     /**
@@ -293,18 +502,27 @@ class CheckoutPaymentService
             return;
         }
 
+        // Celah cancel-then-pay ditutup di sini
+        if ($checkout->status !== 'pending') {
+            $payment->fill([
+                'transaction_status' => $payment->transaction_status,
+                'updated_by' => 'midtrans',
+            ]);
+            $payment->save();
+
+            return;
+        }
+
         $payment->status = 'paid';
         $payment->paid_at = now();
         $payment->save();
 
-        if ($checkout->status !== 'paid') {
-            $this->deductStockForCheckout($checkout);
+        $this->deductStockForCheckout($checkout);
 
-            $checkout->update([
-                'status' => 'paid',
-                'updated_by' => 'midtrans',
-            ]);
-        }
+        $checkout->update([
+            'status' => 'paid',
+            'updated_by' => 'midtrans',
+        ]);
     }
 
     private function deductStockForCheckout(Checkout $checkout): void

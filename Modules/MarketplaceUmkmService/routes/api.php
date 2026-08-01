@@ -14,6 +14,10 @@ use Shared\Constants\MiddlewareConstantsHelper;
 
 Route::prefix('v1/marketplace-umkm-service')->group(function () {
     Route::post('midtrans/notification', MidtransNotificationController::class)
+        ->middleware([
+            'throttle:midtrans-notification',
+            'midtrans.protect',
+        ])
         ->name('marketplace-umkm-service.midtrans.notification');
 
     Route::middleware([

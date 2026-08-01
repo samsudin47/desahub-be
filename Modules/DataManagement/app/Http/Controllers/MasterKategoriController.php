@@ -5,6 +5,7 @@ namespace Modules\DataManagement\Http\Controllers;
 use App\Facades\ResponseStandardAPI;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Modules\DataManagement\Http\Requests\IndexMasterKategoriRequest;
 use Modules\DataManagement\Http\Requests\StoreMasterKategoriRequest;
 use Modules\DataManagement\Http\Requests\UpdateMasterKategoriRequest;
 use Modules\DataManagement\Services\MasterKategoriService;
@@ -14,12 +15,18 @@ class MasterKategoriController extends Controller
 {
     public function __construct(private MasterKategoriService $masterKategoriService) {}
 
-    public function index(): JsonResponse
+    public function index(IndexMasterKategoriRequest $request): JsonResponse
     {
-        return ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_SUCCESS)
+        $result = $this->masterKategoriService->getPaginated(
+            $request->perPage(),
+            $request->search()
+        );
+
+        return ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_PAGINATION)
             ->info('Get master kategori success')
             ->detail('Master kategori retrieved successfully')
-            ->data(['master_kategori' => $this->masterKategoriService->getAll()])
+            ->data(['master_kategori' => $result['items']])
+            ->pagination($result['pagination'])
             ->response();
     }
 

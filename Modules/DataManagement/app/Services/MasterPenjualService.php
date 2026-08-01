@@ -2,10 +2,48 @@
 
 namespace Modules\DataManagement\Services;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Modules\DataManagement\Models\MasterPenjual;
+use Shared\Utilities\PaginationHelper;
 
 class MasterPenjualService
 {
+    /**
+     * @return array{
+     *     items: list<array{uuid: string, nama_penjual: string, email: string|null, no_hp: string|null, alamat: string|null}>,
+     *     pagination: LengthAwarePaginator
+     * }
+     */
+    public function getPaginated(?int $perPage = null, ?string $search = null): array
+    {
+        $paginator = MasterPenjual::query()
+            ->notDeleted()
+            ->when($search !== null, function ($query) use ($search): void {
+                $term = '%'.$search.'%';
+
+                $query->where(function ($query) use ($term): void {
+                    $query->where('nama_penjual', 'like', $term)
+                        ->orWhere('email', 'like', $term);
+                });
+            })
+            ->orderBy('nama_penjual')
+            ->paginate(
+                PaginationHelper::resolvePerPage($perPage),
+                ['uuid', 'nama_penjual', 'email', 'no_hp', 'alamat']
+            );
+
+        $paginator->setCollection(
+            $paginator->getCollection()
+                ->map(fn (MasterPenjual $masterPenjual) => $this->format($masterPenjual))
+                ->values()
+        );
+
+        return [
+            'items' => $paginator->items(),
+            'pagination' => $paginator,
+        ];
+    }
+
     /**
      * @return list<array{uuid: string, nama_penjual: string, email: string|null, no_hp: string|null, alamat: string|null}>
      */

@@ -5,6 +5,7 @@ namespace Modules\MarketplaceService\Http\Controllers;
 use App\Facades\ResponseStandardAPI;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Modules\MarketplaceService\Http\Requests\IndexProductRequest;
 use Modules\MarketplaceService\Http\Requests\StoreProductRequest;
 use Modules\MarketplaceService\Http\Requests\UpdateProductRequest;
 use Modules\MarketplaceService\Services\ProductService;
@@ -14,12 +15,18 @@ class ProductController extends Controller
 {
     public function __construct(private ProductService $productService) {}
 
-    public function index(): JsonResponse
+    public function index(IndexProductRequest $request): JsonResponse
     {
-        return ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_SUCCESS)
+        $result = $this->productService->getPaginated(
+            $request->perPage(),
+            $request->search()
+        );
+
+        return ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_PAGINATION)
             ->info('Get product success')
             ->detail('Product retrieved successfully')
-            ->data(['product' => $this->productService->getAll()])
+            ->data(['product' => $result['items']])
+            ->pagination($result['pagination'])
             ->response();
     }
 

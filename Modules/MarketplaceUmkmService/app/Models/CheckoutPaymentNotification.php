@@ -23,6 +23,11 @@ class CheckoutPaymentNotification extends Model
         'payload',
         'signature_valid',
         'processed_at',
+        'reject_reason',
+        'verified_via_api',
+        'ip_address',
+        'payload_hash',
+        'http_status',
         'created_at',
         'updated_at',
     ];
@@ -31,6 +36,7 @@ class CheckoutPaymentNotification extends Model
         'payload' => 'array',
         'signature_valid' => 'boolean',
         'processed_at' => 'datetime',
+        'verified_via_api' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

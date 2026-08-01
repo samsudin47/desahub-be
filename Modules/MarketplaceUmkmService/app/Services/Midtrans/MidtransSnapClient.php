@@ -4,7 +4,9 @@ namespace Modules\MarketplaceUmkmService\Services\Midtrans;
 
 use Midtrans\Config as MidtransConfig;
 use Midtrans\Snap;
+use Midtrans\Transaction;
 use RuntimeException;
+use Throwable;
 
 class MidtransSnapClient
 {
@@ -37,6 +39,47 @@ class MidtransSnapClient
         $expected = hash('sha512', $orderId.$statusCode.$grossAmount.$serverKey);
 
         return hash_equals($expected, $signatureKey);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getTransactionStatus(string $orderId): array
+    {
+        $this->configure();
+
+        $status = Transaction::status($orderId);
+
+        if (is_object($status)) {
+            $status = json_decode(json_encode($status), true);
+        }
+
+        if (! is_array($status)) {
+            throw new RuntimeException('Respons status Midtrans tidak valid.');
+        }
+
+        return $status;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function cancelTransaction(string $orderId): ?array
+    {
+        $this->configure();
+
+        try {
+            $result = Transaction::cancel($orderId);
+
+            if (is_object($result)) {
+                $result = json_decode(json_encode($result), true);
+            }
+
+            return is_array($result) ? $result : null;
+        } catch (Throwable) {
+            // Sudah expire/cancel di Midtrans: abaikan
+            return null;
+        }
     }
 
     public function clientKey(): string

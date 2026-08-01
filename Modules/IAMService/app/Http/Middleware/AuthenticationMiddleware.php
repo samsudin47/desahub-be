@@ -98,9 +98,11 @@ class AuthenticationMiddleware
             'api/v1/iam-services/roles',
             'api/v1/iam-services/auth/login',
             'api/v1/iam-services/auth/register',
+            'api/v1/iam-services/auth/forgot-password',
             'api/v1/iam-services/auth/reset-password',
             'api/v1/iam/auth/login',
             'api/v1/iam/auth/register',
+            'api/v1/iam/auth/forgot-password',
             'api/v1/iam/auth/reset-password',
             'api/v1/marketplace-umkm-service/midtrans/notification',
         ]);

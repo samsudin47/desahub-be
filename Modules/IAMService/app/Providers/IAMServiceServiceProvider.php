@@ -2,6 +2,7 @@
 
 namespace Modules\IAMService\Providers;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
@@ -12,6 +13,7 @@ use Modules\IAMService\Http\Middleware\FeatureCheckMiddleware;
 use Modules\IAMService\Http\Middleware\RoleCheckMiddleware;
 use Modules\IAMService\Http\Middleware\ScopedAccessPermissionCheckMiddleware;
 use Modules\IAMService\Http\Middleware\ServiceModuleCheckMiddleware;
+use Modules\IAMService\Models\User;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -45,6 +47,7 @@ class IAMServiceServiceProvider extends ServiceProvider
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
         $this->registerMiddleware($router);
+        $this->registerPasswordResetUrl();
     }
 
     public function register(): void
@@ -161,5 +164,17 @@ class IAMServiceServiceProvider extends ServiceProvider
         foreach ($this->routeMiddleware as $alias => $class) {
             $router->aliasMiddleware($alias, $class);
         }
+    }
+
+    protected function registerPasswordResetUrl(): void
+    {
+        ResetPassword::createUrlUsing(function (User $user, string $token): string {
+            $baseUrl = rtrim((string) config('iamservice.auth.frontend_reset_password_url'), '?&');
+
+            return $baseUrl.'?'.http_build_query([
+                'token' => $token,
+                'email' => $user->getEmailForPasswordReset(),
+            ]);
+        });
     }
 }

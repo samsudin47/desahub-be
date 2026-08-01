@@ -5,6 +5,7 @@ namespace Modules\DataManagement\Http\Controllers;
 use App\Facades\ResponseStandardAPI;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Modules\DataManagement\Http\Requests\IndexMasterPenjualRequest;
 use Modules\DataManagement\Http\Requests\StoreMasterPenjualRequest;
 use Modules\DataManagement\Http\Requests\UpdateMasterPenjualRequest;
 use Modules\DataManagement\Services\MasterPenjualService;
@@ -14,12 +15,18 @@ class MasterPenjualController extends Controller
 {
     public function __construct(private MasterPenjualService $masterPenjualService) {}
 
-    public function index(): JsonResponse
+    public function index(IndexMasterPenjualRequest $request): JsonResponse
     {
-        return ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_SUCCESS)
+        $result = $this->masterPenjualService->getPaginated(
+            $request->perPage(),
+            $request->search()
+        );
+
+        return ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_PAGINATION)
             ->info('Get master penjual success')
             ->detail('Master penjual retrieved successfully')
-            ->data(['master_penjual' => $this->masterPenjualService->getAll()])
+            ->data(['master_penjual' => $result['items']])
+            ->pagination($result['pagination'])
             ->response();
     }
 

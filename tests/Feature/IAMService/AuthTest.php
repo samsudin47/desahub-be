@@ -1,6 +1,9 @@
 <?php
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Modules\IAMService\Database\Seeders\RoleSeeder;
 use Modules\IAMService\Models\Role;
 use Modules\IAMService\Models\User;
@@ -150,6 +153,108 @@ it('logs out authenticated user', function () {
 
     $response->assertOk()
         ->assertJsonPath('result', 'success');
+});
+
+it('sends forgot password email for existing user', function () {
+    Notification::fake();
+
+    $user = User::create([
+        'uuid' => generateUuid(),
+        'username' => 'resetuser',
+        'email' => 'reset@example.com',
+        'password' => 'password123',
+        'role' => AvailableRoleConstantsHelper::USER,
+        'is_active' => true,
+        'is_deleted' => false,
+        'created_by' => 'test',
+        'updated_by' => 'test',
+    ]);
+
+    $response = $this->postJson('/api/v1/iam-services/auth/forgot-password', [
+        'email' => 'reset@example.com',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('result', 'success')
+        ->assertJsonPath('message', 'Password reset email sent');
+
+    Notification::assertSentTo($user, ResetPassword::class);
+});
+
+it('does not reveal missing email on forgot password', function () {
+    Notification::fake();
+
+    $response = $this->postJson('/api/v1/iam-services/auth/forgot-password', [
+        'email' => 'unknown@example.com',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('result', 'success')
+        ->assertJsonPath('message', 'Password reset email sent');
+
+    Notification::assertNothingSent();
+});
+
+it('resets password with a valid token', function () {
+    $user = User::create([
+        'uuid' => generateUuid(),
+        'username' => 'newpassuser',
+        'email' => 'newpass@example.com',
+        'password' => 'password123',
+        'role' => AvailableRoleConstantsHelper::USER,
+        'is_active' => true,
+        'is_deleted' => false,
+        'created_by' => 'test',
+        'updated_by' => 'test',
+    ]);
+
+    app(UserRoleService::class)->assignRoleToUser($user, AvailableRoleConstantsHelper::USER, 'test');
+
+    $token = Password::broker()->createToken($user);
+
+    $response = $this->postJson('/api/v1/iam-services/auth/reset-password', [
+        'email' => 'newpass@example.com',
+        'token' => $token,
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('result', 'success')
+        ->assertJsonPath('message', 'Password reset success');
+
+    $loginResponse = $this->postJson('/api/v1/iam-services/auth/login', [
+        'username' => 'newpassuser',
+        'password' => 'newpassword123',
+    ]);
+
+    $loginResponse->assertOk()
+        ->assertJsonPath('result', 'success');
+});
+
+it('rejects reset password with invalid token', function () {
+    User::create([
+        'uuid' => generateUuid(),
+        'username' => 'badtokenuser',
+        'email' => 'badtoken@example.com',
+        'password' => 'password123',
+        'role' => AvailableRoleConstantsHelper::USER,
+        'is_active' => true,
+        'is_deleted' => false,
+        'created_by' => 'test',
+        'updated_by' => 'test',
+    ]);
+
+    $response = $this->postJson('/api/v1/iam-services/auth/reset-password', [
+        'email' => 'badtoken@example.com',
+        'token' => 'invalid-token',
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123',
+    ]);
+
+    $response->assertStatus(400)
+        ->assertJsonPath('result', 'failed')
+        ->assertJsonPath('message', 'Invalid or expired token');
 });
 
 it('backfills user role from legacy role column', function () {

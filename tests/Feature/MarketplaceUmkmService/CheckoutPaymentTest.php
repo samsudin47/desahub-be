@@ -184,6 +184,22 @@ it('handles midtrans settlement notification and deducts stock', function () {
         $mock->shouldReceive('clientKey')->andReturn('SB-Mid-client-test');
         $mock->shouldReceive('isProduction')->andReturn(false);
         $mock->shouldReceive('isValidSignature')->once()->andReturn(true);
+        $mock->shouldReceive('getTransactionStatus')->once()->andReturnUsing(function (string $orderId) {
+            return [
+                'order_id' => $orderId,
+                'transaction_status' => 'settlement',
+                'gross_amount' => '80000.00',
+                'fraud_status' => 'accept',
+                'payment_type' => 'bank_transfer',
+                'transaction_id' => 'midtrans-trx-1',
+                'va_numbers' => [
+                    [
+                        'bank' => 'bca',
+                        'va_number' => '8077701234567890',
+                    ],
+                ],
+            ];
+        });
     });
 
     $pay = $this->withToken($this->token)
@@ -242,4 +258,85 @@ it('rejects invalid midtrans signature', function () {
             'signature_key' => 'invalid',
             'transaction_status' => 'settlement',
         ])->assertStatus(400);
+});
+
+it('rejects settlement when gross amount mismatches payment', function () {
+    $checkoutUuid = createCheckoutWithShipping();
+
+    $this->mock(MidtransSnapClient::class, function ($mock) {
+        $mock->shouldReceive('createSnapToken')->once()->andReturn('snap-token-test');
+        $mock->shouldReceive('clientKey')->andReturn('SB-Mid-client-test');
+        $mock->shouldReceive('isProduction')->andReturn(false);
+        $mock->shouldReceive('isValidSignature')->once()->andReturn(true);
+    });
+
+    $pay = $this->withToken($this->token)
+        ->postJson('/api/v1/marketplace-umkm-service/checkout/'.$checkoutUuid.'/pay')
+        ->assertOk();
+
+    $orderId = $pay->json('datas.order_id');
+
+    $this->withoutToken()
+        ->postJson('/api/v1/marketplace-umkm-service/midtrans/notification', [
+            'order_id' => $orderId,
+            'status_code' => '200',
+            'gross_amount' => '1.00',
+            'signature_key' => midtransSignature($orderId, '200', '1.00'),
+            'transaction_status' => 'settlement',
+            'fraud_status' => 'accept',
+        ])->assertStatus(400);
+
+    expect(Checkout::query()->where('uuid', $checkoutUuid)->value('status'))->toBe('pending');
+    expect(CheckoutPayment::query()->where('order_id', $orderId)->value('status'))->toBe('pending');
+    expect($this->product->fresh()->stock)->toBe(10);
+});
+
+it('does not mark paid when checkout was cancelled before settlement', function () {
+    $checkoutUuid = createCheckoutWithShipping();
+
+    $this->mock(MidtransSnapClient::class, function ($mock) {
+        $mock->shouldReceive('createSnapToken')->once()->andReturn('snap-token-test');
+        $mock->shouldReceive('clientKey')->andReturn('SB-Mid-client-test');
+        $mock->shouldReceive('isProduction')->andReturn(false);
+        $mock->shouldReceive('cancelTransaction')->once()->andReturn(null);
+        $mock->shouldReceive('isValidSignature')->once()->andReturn(true);
+        $mock->shouldReceive('getTransactionStatus')->once()->andReturnUsing(function (string $orderId) {
+            return [
+                'order_id' => $orderId,
+                'transaction_status' => 'settlement',
+                'gross_amount' => '80000.00',
+                'fraud_status' => 'accept',
+                'payment_type' => 'bank_transfer',
+                'transaction_id' => 'midtrans-trx-cancelled-checkout',
+            ];
+        });
+    });
+
+    $pay = $this->withToken($this->token)
+        ->postJson('/api/v1/marketplace-umkm-service/checkout/'.$checkoutUuid.'/pay')
+        ->assertOk();
+
+    $orderId = $pay->json('datas.order_id');
+    $grossAmount = (string) $pay->json('datas.gross_amount');
+
+    $this->withToken($this->token)
+        ->postJson('/api/v1/marketplace-umkm-service/checkout/'.$checkoutUuid.'/cancel')
+        ->assertOk();
+
+    expect(Checkout::query()->where('uuid', $checkoutUuid)->value('status'))->toBe('cancelled');
+    expect(CheckoutPayment::query()->where('order_id', $orderId)->value('status'))->toBe('cancelled');
+
+    $this->withoutToken()
+        ->postJson('/api/v1/marketplace-umkm-service/midtrans/notification', [
+            'order_id' => $orderId,
+            'status_code' => '200',
+            'gross_amount' => $grossAmount.'.00',
+            'signature_key' => midtransSignature($orderId, '200', $grossAmount.'.00'),
+            'transaction_status' => 'settlement',
+            'fraud_status' => 'accept',
+        ])->assertOk();
+
+    expect(Checkout::query()->where('uuid', $checkoutUuid)->value('status'))->toBe('cancelled');
+    expect(CheckoutPayment::query()->where('order_id', $orderId)->value('status'))->toBe('cancelled');
+    expect($this->product->fresh()->stock)->toBe(10);
 });

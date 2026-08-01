@@ -21,7 +21,7 @@ class MidtransNotificationController extends Controller
         return ResponseStandardAPI::type(ResponseTypeConstantsHelper::TYPE_SUCCESS)
             ->info('Notifikasi Midtrans berhasil diterima')
             ->detail('Notifikasi Midtrans berhasil diterima')
-            ->data($this->checkoutPaymentService->handleNotification($payload))
+            ->data($this->checkoutPaymentService->handleNotification($payload, $request->ip()))
             ->response();
     }
 }

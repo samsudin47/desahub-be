@@ -16,7 +16,10 @@ use Shared\Constants\ResponseTypeConstantsHelper;
 
 class CheckoutService
 {
-    public function __construct(private CartService $cartService) {}
+    public function __construct(
+        private CartService $cartService,
+        private CheckoutPaymentService $checkoutPaymentService,
+    ) {}
 
     /**
      * @param  array{cart_item_uuids: list<string>}  $data
@@ -162,6 +165,11 @@ class CheckoutService
     {
         return DB::transaction(function () use ($uuid) {
             $checkout = $this->findPendingCheckoutForUserOrFail($uuid);
+
+            $this->checkoutPaymentService->cancelPendingPaymentsForCheckout(
+                $checkout->uuid,
+                'checkout_cancelled_by_user'
+            );
 
             $checkout->update([
                 'status' => 'cancelled',
